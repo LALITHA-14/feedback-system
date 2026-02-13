@@ -1,0 +1,4 @@
+kafka-python
+pymysql
+nltk
+python-dotenv
