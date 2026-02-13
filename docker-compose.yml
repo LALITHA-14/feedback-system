@@ -1,30 +1,53 @@
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: feedback-system-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: feedbackdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    container_name: feedback-system-zookeeper
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      - zookeeper
+    container_name: feedback-system-kafka
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
     ports:
       - "9092:9092"
+    depends_on:
+      - zookeeper
 
   api:
-    build: ./api
-    depends_on:
-      - kafka
+    build:
+      context: ./api
+      dockerfile: Dockerfile.api
+    container_name: feedback-system-api
     ports:
       - "5000:5000"
+    depends_on:
+      - mysql
+      - kafka
 
   worker:
-    build: ./worker
+    build:
+      context: ./worker
+      dockerfile: Dockerfile.worker
+    container_name: feedback-system-worker
     depends_on:
+      - mysql
       - kafka
+
+volumes:
+  db_data:
